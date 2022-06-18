@@ -20,9 +20,9 @@ app.use(bodyParser.text({type: 'text/xml'}));
 app.use(express.json());
 
 var config = {
-    "appID": "wx98d760a52c44edd1",
-    "appsecret": "cef47b82e758cdb8e735570650812e00",
-    "token": "ormg",
+    "appID": "xxxxxxxx",
+    "appsecret": "xxxxxxxxxx",
+    "token": "xxxx",
 }
 //------------------------------------------验证连接服务器------------------------------------------
 app.get("/", (req, res, next)=> {
