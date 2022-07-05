@@ -6,6 +6,9 @@ import sqlite3,re,time
 from lxml import etree
 from pyppeteer import launch
 import asyncio
+import random
+from httpx import AsyncClient
+from bs4 import BeautifulSoup
 
 #查询梗api
 def get_geng(w:str):
@@ -106,7 +109,7 @@ async def pq():
 
 
 async def lol():
-    browser = await launch(headless=False, dumpio=True,
+    browser = await launch(headless=True, dumpio=True,
                            args=['--no-sandbox', '--window-size=1920,1080', '--disable-infobars'])   # 进入有头模式
     page = await browser.newPage()           # 打开新的标签页
     await page.setViewport({'width': 1920, 'height': 5000})      # 页面大小一致
@@ -144,11 +147,67 @@ def bdbk(gjc:str):
 
 
 
+max_num = 3
+magnet_url = "https://clm9.me/search?word=蜘蛛侠"
+headers = {
+    "cookie":"challenge=a0909810a6d132832e28ef6da18ec77c; ex=1; _ga=GA1.1.326405849.1656734676; _ga_W7KV15XZN0=GS1.1.1656817532.3.1.1656817536.0",
+    "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
+}
+
+async def get_magnet(url):
+    async with AsyncClient() as client:
+        # 发送请求
+        res = await client.get(url=url, headers=headers, timeout=30)
+        res=res.text
+        soup = BeautifulSoup(res, "lxml")
+        item_lst = soup.find_all("a", {"class": "SearchListTitle_result_title"})
+        async with AsyncClient() as client2:
+            tasks = []
+            # 获取每一个url, 异步访问
+            for item in item_lst:
+                url = magnet_url + item.get("href")
+                tasks.append(get_info(url,client2))
+            data = await asyncio.gather(*tasks)
+    # num是每次发送的条数        
+    num = max_num
+    # 防止数组越界
+    if len(data) < max_num:
+        num = len(data)
+    # 随机选择一些条目 
+    message_list = random.sample(data, num)
+    message = ""
+    # message拼接
+    for msg in message_list:
+        message = message + msg + "\n"
+    # 在控制台输出一下
+    print(message)
+    return message
 
 
-bdbk('苹果')
+async def get_info(url,client):
+    res = await client.get(url=url, headers=headers, timeout=30)
+    res=res.text
+    soup = BeautifulSoup(res, "lxml")
+    Information_l_content = soup.find_all("div", {"class": "Information_l_content"})
+    # 这个是磁力链接
+    magnet = Information_l_content[0].find("a").get("href")
+    #  这个是文件大小
+    size = list(Information_l_content[1])[4]
+    size = re.sub(u"\\<.*?\\>", "", str(size)) 
+    # 访问File_list_info, 目的是为了获取文件名
+    name = soup.find_all('div',{'class':'File_list_info'})
+    name = list(name[0])[0]
+    message = f"文件名: {name} \n大小: {size}\n链接: {magnet}\n"
+    print(message)
+    return message
+
+
+
+# bdbk('苹果')
 # asyncio.get_event_loop().run_until_complete(pq()) #调用
 # asyncio.get_event_loop().run_until_complete(lol())
 # refresh_db()
 #get_geng('芜湖起飞')
 # get_liushi()
+asyncio.get_event_loop().run_until_complete(get_magnet(magnet_url))
+# get_magnet(magnet_url)
